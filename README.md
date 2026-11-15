@@ -1,142 +1,249 @@
 # StockZ
 
-StockZ es el proyecto base para un sistema de gestión de catálogo en Django con autenticación nativa, usando templates server-rendered y Bootstrap 5. Este repositorio queda como esqueleto inicial y no incluye aún los ABM funcionales ni el sistema completo.
+Repositorio: https://github.com/E-SebastianUris/StockZ
 
-## Objetivo de la base
+StockZ es una aplicación web desarrollada en Django para organizar y consultar el catálogo de un kiosco. El sistema centraliza la información de productos, categorías y proveedores, y controla el acceso a la información según el rol del usuario autenticado.
 
-- Python 3
+## Problema que resuelve
+
+En un kiosco, la información de productos, categorías y proveedores suele distribuirse entre listados, hojas de cálculo y registros informales. Esto dificulta:
+
+- consultar en forma rápida qué productos están disponibles,
+- mantener una estructura clara por categoría,
+- identificar proveedores y sus datos de contacto,
+- controlar quién puede ver o modificar la información del catálogo.
+
+StockZ propone una solución web para centralizar ese catálogo y establecer permisos por perfil de usuario.
+
+## Solución propuesta
+
+StockZ es una aplicación web de gestión del catálogo del kiosco. Permite:
+
+- autenticar usuarios con el sistema nativo de Django,
+- definir roles mediante grupos,
+- controlar permisos del backend,
+- consultar productos, categorías y proveedores,
+- mantener una separación de acceso entre administradores y empleados.
+
+## Objetivos del sistema
+
+- centralizar la información del catálogo del kiosco,
+- facilitar la consulta de productos, categorías y proveedores,
+- diferenciar permisos por rol,
+- mantener un sistema simple y operativo en entorno local,
+- usar Django como base para autenticación, autorización y gestión del catálogo.
+
+## Funcionalidades implementadas
+
+En su estado actual, StockZ incluye lo siguiente:
+
+- inicio y cierre de sesión,
+- roles `Administrador` y `Empleado`,
+- administración de permisos a través de grupos de Django,
+- consulta de productos, categorías y proveedores,
+- restricción de operaciones de escritura para usuarios con rol Empleado,
+- carga de datos de demostración para iniciar la aplicación con información base.
+
+## Roles y permisos
+
+Los grupos `Administrador` y `Empleado` se crean automáticamente después de ejecutar las migraciones.
+
+- `Administrador`: cuenta con permisos de consulta y de escritura configurados en Django para el catálogo.
+- `Empleado`: puede consultar productos, categorías y proveedores, pero no ejecutar operaciones de alta, edición ni eliminación.
+
+La validación real de permisos se realiza en el backend con Django y el decorador `permission_required`.
+
+### Importante sobre permisos CRUD
+
+Los permisos CRUD del grupo `Administrador` están configurados en Django, pero los flujos completos de alta, edición y eliminación aún no están implementados operativamente en la aplicación. La seguridad por permisos existe en el backend, pero la funcionalidad completa de creación y edición del catálogo no está finalizada como flujo de negocio completo.
+
+### Superusuario y asignación de grupo
+
+La creación de un superusuario no lo incorpora automáticamente al grupo `Administrador`.
+
+Para asignar el rol correcto, se debe:
+
+1. crear el superusuario con `python manage.py createsuperuser`,
+2. ingresar a Django Admin,
+3. abrir el usuario creado,
+4. asignarle el grupo `Administrador` desde la sección de grupos.
+
+## Tecnologías utilizadas
+
+StockZ utiliza las siguientes tecnologías principales:
+
+- Python
 - Django
-- Django Templates
-- Bootstrap 5
-- SQLite como base por defecto para desarrollo y demostración local
-- PostgreSQL como alternativa futura para entornos más avanzados
-- ORM de Django
-- autenticación nativa con sesiones, grupos y permisos
-- pytest + pytest-django
+- Django ORM
+- SQLite como base de datos actual para el entorno local
+- Bootstrap 5 para la interfaz web
+- pytest y pytest-django para pruebas automatizadas
 
-## Comparación con StockX
+### Base de datos
 
-### Estructura real observada en StockX
+La base de datos utilizada actualmente es SQLite, que es la configuración por defecto para desarrollo local y pruebas. PostgreSQL puede considerarse como alternativa prevista para entornos más avanzados, pero no es necesaria para ejecutar el proyecto en este estado actual.
 
-Se verificó que en la carpeta fuente `C:\GitHub\Facultad\TIF\StockX\backend` existe una aplicación Django con:
+## Modelo de datos
 
-- `config/settings.py`
-- `config/urls.py`
-- `authentication/models.py`
-- `authentication/views.py`
-- `inventario/models.py`
-- `inventario/views.py`
-- `inventario/permissions.py`
-- `ventas/` y `dashboard/`
-- `requirements.txt`
+El proyecto define tres modelos dentro del catálogo.
 
-El proyecto de origen usa:
+### Categoría
 
-- Django + DRF + JWT
-- `AUTH_USER_MODEL = 'authentication.Usuario'`
-- roles hardcodeados en `Usuario.rol`
-- API REST con ViewSets
-- catálogo y negocio con elementos de ventas, alertas y compras no incluidos en StockZ
+Representa una agrupación de productos.
 
-### Qué se adapta a StockZ
+- `nombre`: nombre único de la categoría.
+- `descripcion`: texto descriptivo opcional.
+- `activo`: indica si la categoría está activa.
+- `creado_el` y `actualizado_el`: timestamps de auditoría.
 
-- Modelo de catálogo: `Categoria`, `Proveedor` y `Producto` son la base reutilizable.
-- Validaciones de negocio compatibles: precios no negativos, stock no negativo, `activo`, `unique` y reglas de integridad.
-- Organización por apps y settings centralizados.
-- Uso de Django Templates en lugar de SPA/REST.
+### Producto
 
-### Qué se reconstruye
+Representa un artículo del catálogo del kiosco.
 
-- Autenticación nativa de Django, con `User`/`Group`/`Permission` y sesiones.
-- Roles `Administrador` y `Empleado` como grupos de Django, no como campo `rol` en un custom user.
-- Vistas y URLs server-side, no API REST + JWT.
-- ABM de productos, categorías y proveedores aún pendientes.
-- Todo lo excluido: ventas, movimientos, dashboard, alertas, historial de compras, `ProductoProveedor`, `precio_costo`, etc.
+- `nombre`
+- `codigo_barra`: valor único opcional.
+- `descripcion`
+- `categoria`: relación `ForeignKey` hacia `Categoria`.
+- `precio_venta`
+- `stock_actual`
+- `stock_minimo`
+- `activo`
+- `creado_el` y `actualizado_el`
 
-## Reutilización de StockX
+Relación real implementada:
 
-### Referencias originales consultadas
+- cada `Producto` pertenece a una sola `Categoria`;
+- una `Categoria` puede tener varios `Producto` asociados.
 
-- `C:\GitHub\Facultad\TIF\StockX\backend\config\settings.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\authentication\models.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\authentication\serializers.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\authentication\views.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\inventario\models.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\inventario\permissions.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\inventario\views.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\inventario\urls.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\config\urls.py`
-- `C:\GitHub\Facultad\TIF\StockX\backend\requirements.txt`
+Se aplican validaciones para asegurar que `precio_venta`, `stock_actual` y `stock_minimo` no sean negativos.
 
-## Estructura creada en StockZ
+### Proveedor
 
-- `manage.py`
-- `requirements.txt`
-- `pytest.ini`
-- `.env.example`
-- `README.md`
-- `stockz/settings.py`
-- `stockz/urls.py`
-- `stockz/asgi.py`
-- `stockz/wsgi.py`
-- `apps/__init__.py`
-- `apps/catalogo/...`
-- `apps/usuarios/...`
-- `templates/base.html`
-- `templates/home.html`
-- `templates/registration/login.html`
-- `docs/stockx_reuse.md`
+Representa a la entidad que suministra productos o insumos.
 
-## Adaptaciones necesarias
+- `nombre`
+- `contacto`
+- `telefono`
+- `email`
+- `direccion`
+- `cuit`: identificador único opcional.
+- `activo`
+- `creado_el` y `actualizado_el`
 
-1. Reemplazar `AUTH_USER_MODEL` por el `User` nativo de Django.
-2. Usar grupos `Administrador` y `Empleado` en vez de `rol` en `Usuario`.
-3. Eliminar `JWT` y `SimpleJWT` del baseline de StockZ.
-4. Reemplazar `DRF ViewSet` por vistas de Django Template.
-5. Excluir `ProductoProveedor`, `precio_costo`, compras e historial.
-6. Mantener solamente el catálogo y la autenticación requerida.
+En esta implementación, no existe una relación de compra ni de asociación histórica entre `Proveedor` y `Producto`; cada entidad se conserva de manera independiente dentro del catálogo.
 
-## Estado actual
+## Instalación y configuración
 
-Este esqueleto deja la base lista para continuar con la parte funcional en una segunda etapa, sin implementar aún ABM, login empresarial completo ni módulos excluidos.
+### Requisitos
 
-Para demostración local y desarrollo inicial, el proyecto se ejecuta con SQLite de manera sencilla y sin requerir PostgreSQL. PostgreSQL queda como opción futura para despliegues o entornos de producción más complejos.
+- Python instalado en el sistema.
+- acceso a la línea de comandos.
 
-## Usuarios de demostración
+### 1. Clonar el repositorio
 
-Los grupos `Administrador` y `Empleado` se crean automáticamente al migrar la base de datos.
+```bash
+git clone https://github.com/E-SebastianUris/StockZ
+cd StockZ
+```
 
-### Crear usuarios de prueba con Django Admin
+### 2. Crear un entorno virtual
 
-1. Ejecutá la base local:
+En Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+En macOS/Linux:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Instalar dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar la base de datos
+
+El proyecto usa SQLite por defecto para desarrollo local. No es necesario configurar una base de datos externa para ejecutar el sistema en este estado actual.
+
+PostgreSQL puede usarse como alternativa prevista en entornos más avanzados, pero no es requisito para correr el proyecto.
+
+### 5. Ejecutar migraciones
 
 ```bash
 python manage.py migrate
-python manage.py runserver
 ```
 
-2. Creá un superusuario si aún no existe:
+Esta operación crea las tablas del proyecto y también genera automáticamente los grupos `Administrador` y `Empleado`.
+
+### 6. Crear un superusuario
 
 ```bash
 python manage.py createsuperuser
 ```
 
-3. Entrá al panel administrativo en `http://127.0.0.1:8000/admin/`.
-4. Creá dos usuarios, por ejemplo:
-   - `admin_demo` → asignar grupo `Administrador`
-   - `empleado_demo` → asignar grupo `Empleado`
-5. Iniciá sesión con cada usuario en la pantalla de login del sistema.
+Luego, desde Django Admin, se debe asignar el grupo `Administrador` al usuario correspondiente.
 
-Los permisos de cada grupo se asignan desde Django y se validan en el backend, no sólo en la interfaz.
-
-## Verificaciones realizadas
-
-Se ejecutó una verificación sintáctica sobre la estructura creada con:
+### 7. Cargar datos de demostración
 
 ```bash
-python -m compileall "C:\GitHub\Facultad\StockZ"
+python manage.py cargar_datos_demo
 ```
 
-La comprobación de sintaxis debe devolver salida exitosa y sin errores de compilación.
+Este comando crea registros iniciales de categorías, proveedores y productos para probar la aplicación.
 
-> No se tocaron archivos del proyecto origen `StockX`.
+### 8. Levantar el servidor
+
+```bash
+python manage.py runserver
+```
+
+Luego se puede acceder en:
+
+- http://127.0.0.1:8000/
+- http://127.0.0.1:8000/admin/
+
+## Ejecución de pruebas
+
+El proyecto incluye pruebas automatizadas con `pytest` y `pytest-django`.
+
+Para ejecutar la suite actual:
+
+```bash
+python -m pytest -q
+```
+
+Las pruebas cubren la autenticación, el login y logout, el acceso a páginas protegidas, los permisos por rol y la consulta del catálogo.
+
+## Estado actual y funcionalidades pendientes
+
+StockZ se encuentra en una etapa inicial orientada a la gestión del catálogo y al control de acceso del kiosco.
+
+### Implementado
+
+- autenticación con usuarios y sesiones de Django,
+- login y logout,
+- pantalla principal con información del usuario y su rol,
+- grupos `Administrador` y `Empleado`,
+- permisos por grupo para consultar y restringir operaciones,
+- listado de productos, categorías y proveedores,
+- carga de datos de demostración,
+- pruebas automatizadas básicas.
+
+### Pendiente
+
+- los flujos completos de alta, edición y eliminación del catálogo no están finalizados operativamente,
+- la seguridad por permisos sí está configurada en Django, pero la experiencia completa de administración no está implementada como un proceso completo del negocio,
+- el proyecto no incluye módulos adicionales como ventas, compras, movimientos, dashboard o alertas.
+
+En este punto, StockZ está orientado a la gestión del catálogo del kiosco y al control de acceso por rol, con foco en la consulta y la autorización.
+
+## Resumen
+
+StockZ es una aplicación web independiente para organizar y consultar el catálogo de un kiosco. Su propósito principal es centralizar la información del negocio, proteger el acceso según el perfil del usuario y facilitar la operación diaria del catálogo con una base sólida en Django y permisos nativos.
