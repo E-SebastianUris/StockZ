@@ -81,7 +81,18 @@ def test_logout(client, admin_user):
     response = client.post(reverse('logout'))
 
     assert response.status_code == 302
+    assert response.url == reverse('login')
     assert '_auth_user_id' not in client.session
+
+
+@pytest.mark.django_db
+def test_navbar_logout_form_present(client, admin_user):
+    client.force_login(admin_user)
+    response = client.get(reverse('home'))
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert f'action="{reverse("logout")}"' in content
+    assert 'method="post"' in content
 
 
 @pytest.mark.django_db
