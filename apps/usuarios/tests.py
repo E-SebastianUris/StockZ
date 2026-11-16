@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -145,6 +147,147 @@ def test_employee_puede_consultar_pero_no_crear(client, employee_user, catalogo_
     ]:
         response = client.post(url)
         assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_admin_abm_productos(client, admin_user, catalogo_demo):
+    client.force_login(admin_user)
+    categoria = catalogo_demo['categoria']
+
+    create_response = client.post(reverse('catalogo:producto_crear'), {
+        'nombre': 'Galletas surtidas',
+        'codigo_barra': '779000123456',
+        'descripcion': 'Paquete de galletas',
+        'categoria': categoria.pk,
+        'precio_venta': '320.50',
+        'stock_actual': '12',
+        'stock_minimo': '3',
+        'activo': 'on',
+    })
+
+    assert create_response.status_code == 302
+    producto = Producto.objects.get(nombre='Galletas surtidas')
+
+    edit_response = client.post(reverse('catalogo:producto_editar', args=[producto.pk]), {
+        'nombre': 'Galletas surtidas premium',
+        'codigo_barra': '779000123457',
+        'descripcion': 'Paquete premium',
+        'categoria': categoria.pk,
+        'precio_venta': '250.10',
+        'stock_actual': '8',
+        'stock_minimo': '4',
+        'activo': 'on',
+    })
+
+    assert edit_response.status_code == 302
+    producto.refresh_from_db()
+    assert producto.nombre == 'Galletas surtidas premium'
+    assert producto.precio_venta == Decimal('250.10')
+
+    delete_response = client.post(reverse('catalogo:producto_eliminar', args=[producto.pk]))
+    assert delete_response.status_code == 302
+    assert not Producto.objects.filter(pk=producto.pk).exists()
+
+
+@pytest.mark.django_db
+def test_admin_abm_categorias(client, admin_user):
+    client.force_login(admin_user)
+
+    create_response = client.post(reverse('catalogo:categoria_crear'), {
+        'nombre': 'Lácteos',
+        'descripcion': 'Productos lácteos',
+        'activo': 'on',
+    })
+
+    assert create_response.status_code == 302
+    categoria = Categoria.objects.get(nombre='Lácteos')
+
+    edit_response = client.post(reverse('catalogo:categoria_editar', args=[categoria.pk]), {
+        'nombre': 'Lacteos',
+        'descripcion': 'Productos de leche y derivados',
+        'activo': 'on',
+    })
+
+    assert edit_response.status_code == 302
+    categoria.refresh_from_db()
+    assert categoria.nombre == 'Lacteos'
+
+    delete_response = client.post(reverse('catalogo:categoria_eliminar', args=[categoria.pk]))
+    assert delete_response.status_code == 302
+    assert not Categoria.objects.filter(pk=categoria.pk).exists()
+
+
+@pytest.mark.django_db
+def test_admin_abm_proveedores(client, admin_user):
+    client.force_login(admin_user)
+
+    create_response = client.post(reverse('catalogo:proveedor_crear'), {
+        'nombre': 'Distribuidora Norte',
+        'contacto': 'Lucas Pérez',
+        'telefono': '351-2233445',
+        'email': 'ventas@norte.com.ar',
+        'direccion': 'Belgrano 700',
+        'cuit': '30-99887766-1',
+        'activo': 'on',
+    })
+
+    assert create_response.status_code == 302
+    proveedor = Proveedor.objects.get(nombre='Distribuidora Norte')
+
+    edit_response = client.post(reverse('catalogo:proveedor_editar', args=[proveedor.pk]), {
+        'nombre': 'Distribuidora Norte SA',
+        'contacto': 'Lucas Pérez',
+        'telefono': '351-2233446',
+        'email': 'norte@ventas.com.ar',
+        'direccion': 'Belgrano 710',
+        'cuit': '30-99887766-2',
+        'activo': 'on',
+    })
+
+    assert edit_response.status_code == 302
+    proveedor.refresh_from_db()
+    assert proveedor.nombre == 'Distribuidora Norte SA'
+    assert proveedor.email == 'norte@ventas.com.ar'
+
+    delete_response = client.post(reverse('catalogo:proveedor_eliminar', args=[proveedor.pk]))
+    assert delete_response.status_code == 302
+    assert not Proveedor.objects.filter(pk=proveedor.pk).exists()
+
+
+@pytest.mark.django_db
+def test_validacion_de_datos_incorrectos(client, admin_user, catalogo_demo):
+    client.force_login(admin_user)
+    categoria = catalogo_demo['categoria']
+
+    response = client.post(reverse('catalogo:producto_crear'), {
+        'nombre': '',
+        'codigo_barra': 'abc',
+        'descripcion': 'Prueba',
+        'categoria': categoria.pk,
+        'precio_venta': '-1',
+        'stock_actual': '-1',
+        'stock_minimo': '-1',
+    })
+    assert response.status_code == 200
+    assert response.context['form'].errors
+
+    response = client.post(reverse('catalogo:categoria_crear'), {
+        'nombre': '',
+        'descripcion': '',
+    })
+    assert response.status_code == 200
+    assert response.context['form'].errors
+
+    response = client.post(reverse('catalogo:proveedor_crear'), {
+        'nombre': 'Proveedor',
+        'contacto': '',
+        'telefono': '',
+        'email': 'email-no-valido',
+        'direccion': '',
+        'cuit': '',
+    })
+    assert response.status_code == 200
+    assert response.context['form'].errors
 
 
 @pytest.mark.django_db

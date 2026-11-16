@@ -20,7 +20,13 @@
             {% csrf_token %}
             <div class="d-flex gap-2">
               <button type="submit" class="btn btn-danger">Confirmar eliminación</button>
-              <a href="{% url 'home' %}" class="btn btn-secondary">Cancelar</a>
+              {% if producto %}
+                <a href="{% url 'catalogo:productos' %}" class="btn btn-secondary">Cancelar</a>
+              {% elif categoria %}
+                <a href="{% url 'catalogo:categorias' %}" class="btn btn-secondary">Cancelar</a>
+              {% else %}
+                <a href="{% url 'catalogo:proveedores' %}" class="btn btn-secondary">Cancelar</a>
+              {% endif %}
             </div>
           </form>
         </div>
