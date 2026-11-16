@@ -15,7 +15,10 @@
           <div class="navbar-nav ms-auto d-flex align-items-center gap-2">
             <span class="text-light">{{ user.username }}</span>
             <span class="badge bg-light text-dark">{{ user_role|default:'Sin rol' }}</span>
-            <a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">Salir</a>
+            <form method="post" action="{% url 'logout' %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-light btn-sm">Salir</button>
+            </form>
           </div>
         {% else %}
           <div class="ms-auto">
